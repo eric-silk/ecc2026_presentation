@@ -1,0 +1,301 @@
+% If enabled, this produces a notes-free version for handing out
+%\def\HANDOUT{}
+% If enabled in tandem with \HANDOUT, doesn't reformat the slides to fit on a
+% single page
+%\def\EMAILEDCOPY{}
+
+\documentclass[
+    aspectratio=169,
+    \ifdefined\HANDOUT
+    handout
+    \else
+    \fi
+]{beamer}
+\usetheme{AnnArbor}
+\usecolortheme{illini}
+\setbeamertemplate{note page}[]
+\ifdefined\HANDOUT
+\ifdefined\EMAILEDCOPY
+\else
+\usepackage{pgfpages}
+\pgfpagesuselayout{resize to}[letterpaper,border shrink=2mm, landscape]
+\fi
+\else
+%\setbeameroption{show notes}
+%\setbeameroption{show notes on second screen=bottom}
+\fi
+\setbeamertemplate{caption}[numbered]
+
+%TODO Font should be adjusted (bigger)
+\usepackage[]{amsfonts}
+\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{ulem}
+\usepackage{censor}
+
+%\usepackage{biblatex}
+%\renewcommand*{\bibfont}{\small}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\graphicspath{img}
+
+\title[ECE 590]{Data-Driven Control of Inverter-Based Microgrids}
+\subtitle{ECE 590}
+\author[TA, ES, TGR]{Temitope Amuda, Eric Silk, T.G. Roberts}
+\institute[ECE@UIUC]{Electrical and Computer Engineering\linebreak University of Illinois at Urbana-Champaign}
+\date{May 6, 2026}
+\logo{\includegraphics[height=1cm]{img/small_logo.png}}
+\begin{document}
+\definecolor{UIUCOrange}{RGB}{255,95,5}
+\definecolor{UIUCBlue}{RGB}{19,41,75}
+\definecolor{UIUCBlueSubhead}{RGB}{5,86,165}
+\definecolor{UIUCBlueKnockoutheader}{RGB}{32,64,151}
+\definecolor{UIUCGray1}{RGB}{232,233,234}
+\definecolor{UIUCGray2}{RGB}{166,168,171}
+\definecolor{UIUCGray3}{RGB}{94,102,105}
+
+\begin{frame}
+    \titlepage
+    \tiny
+    Compiled: \today
+\end{frame}
+
+\begin{frame}
+    \tableofcontents
+\end{frame}
+
+\section{Background}
+
+\subsection*{Motivation}
+\begin{frame}
+    \frametitle{Motivation}
+    \begin{itemize}
+        \item Microgrids often use Inverter-Based Resources (IBRs)
+        \item System models are often missing or incomplete
+        \item \begin{itemize}
+                  \item Topology changes
+                  \item Controller Gains
+              \end{itemize}
+        \item Improved telemetry $\implies$ lots of data to work with
+    \end{itemize}
+\end{frame}
+
+\subsection*{Model-Predictive Control}
+\begin{frame}
+    \frametitle{Model-Predictive Control}
+    \begin{columns}
+        \begin{column}[T]{0.5\textwidth}
+            \textbf{Uses:}
+            \begin{itemize}
+                \item Online, recursive estimation
+                \item Linearized Model(s)
+                \item Succesive operating points
+            \end{itemize}
+        \end{column}
+        \begin{column}[T]{0.5\textwidth}
+            \textbf{Doesn't need:}
+            \begin{itemize}
+                \item System Model
+                \item Inverter Types
+                \item Inverter Control Gains
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+\begin{frame}[t]
+    \frametitle{Prior Art}
+    \begin{columns}
+        \begin{column}[T]{0.5\textwidth}
+            \vspace{0pt}
+            \begin{center}
+                \textbf{Bulk Systems}
+            \end{center}
+            \begin{itemize}
+                \item Model-free disturbance estimator\cite{Ekomwenrenren2024}
+                \item Data-driven frequency, voltage, tie-line regulation\cite{MadiADG2021}
+                \item Sensitivity-based voltage regulation via online topology identification\cite{Liu2021}
+                \item Online feedback voltage regulation\cite{Domin2023}
+            \end{itemize}
+        \end{column}
+        \begin{column}[T]{0.5\textwidth}
+            \vspace{0pt}
+            \begin{center}
+                \textbf{Microgrids}
+            \end{center}
+            \begin{itemize}
+                \item Adaptive Koopman Operator\cite{Gong2023}
+                \item Distributed Online Neural Network\cite{Zheng2022}
+                \item Adaptive multi-model\cite{Ma2021}
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\subsection*{Preliminaries}
+\begin{frame}
+    \frametitle{Power Flow}
+    Balanced, three-phase with $N$ buses where $\mathcal{N}=\left\{1,\ldots,N\right\}$.
+    \begin{subequations}\label{pfproblem}
+        \begin{align}
+            P_{i}(t) & = \sum_{j=1}^N V_{i}(t)V_{j}(t)\Big(G_{ij}\cos{\big(\theta_{i}(t)-\theta_{j}(t)\big)} \nonumber
+            +B_{ij}\sin{\big(\theta_{i}(t)-\theta_{j}(t)\big)\Big)},                                                   \\
+            Q_{i}(t) & = \sum_{j=1}^N V_{i}(t)V_{j}(t)\Big(G_{ij}\sin{\big(\theta_{i}(t)-\theta_{j}(t)\big)}\nonumber
+            -B_{ij}\cos{\big(\theta_{i}(t)-\theta_{j}(t)\big)\Big)},\end{align}
+    \end{subequations}
+    where $G_{ij}$ and $B_{ij}$ are the $(i,j)$-th entries of conductance/suseptance matrices
+\end{frame}
+\begin{frame}
+    \frametitle{Dispatchable Virtual Oscillator Control (dVOC) Equations}
+    \begin{align}
+        \omega_{i}(t) = & ~ \omega^\circ+\frac{\omega^\circ\kappa_{1,i}}{V_{i}^2(t)}\big(P_{i}^{\circ}(t)-P_{i}(t)\big), \\
+        \dot{V}_i(t)=   & ~\omega^\circ\kappa_{2,i}\big((V_i^\circ)^2-V_{i}^2(t)\big)V_{i}(t)\nonumber
+        +\frac{\omega^\circ\kappa_{1,i}}{V_{i}(t)}\big(Q_{i}^{\circ}(t)-Q_{i}(t)\big),
+    \end{align}
+    where $V_i^\circ$ is nominal GFM inverter voltage mag, $\kappa_{1,i}$ is sync gain, and $\kappa_{2,i}$ is voltage amplitude gain.
+    \note[item]{}
+    \note[item]{}
+    \note[item]{}
+\end{frame}
+\begin{frame}
+    \frametitle{Controllability}
+    \begin{center}
+        Not all IBRs are controllable!
+    \end{center}
+    \begin{align}
+        P_{i}^{\circ}(t)=\begin{cases} P_{i}^{r}(t), &i=1,2,\ldots, m,\\ P_{i}^{d}(t), &i=m+1,m+2,\ldots, N,\end{cases}
+    \end{align}
+
+    \begin{align}
+        Q_{i}^{\circ}(t)=\begin{cases} Q_{i}^{r}(t), &i=1,2,\ldots, m,\\ Q_{i}^{d}(t), &i=m+1,m+2,\ldots, N,\end{cases}\label{Q_0}
+    \end{align}
+    \note[item]{Some IBRs are controllable, some aren't}
+    \note[item]{$1..m$ are controllable}
+    \note[item]{$m+1..N$ are not controllable}
+\end{frame}
+\begin{frame}
+    \frametitle{Average Frequency Error}
+    \begin{align}
+        \overline{\Delta \omega}(t) & := \frac{1}{m}\sum_{i=1}^{m}\omega_i(t)-\omega^{\circ}.\label{AFEeqn}
+    \end{align}
+    \begin{center}
+        \textbf{We want to drive this value to 0, and voltages to 1 pu!}
+    \end{center}
+    \note[item]{Unweighted average of frequency errors (pretty self-explanatory)}
+    \note[item]{Frequency adjusted by active power}
+    \note[item]{Voltage adjusted by reactive power}
+\end{frame}
+
+\section{Online Estimation}
+\subsection*{Linearization of the System}
+\begin{frame}
+    \frametitle{Problem Formulation}
+    \vspace{-10pt}
+    \begin{align}
+        \theta(t) & = [\theta_1(t), \theta_2(t), \dots,
+        \theta_m(t)]^\top,                                          \\
+        V(t)      & = [V_1(t), V_2(t), \dots, V_m(t)]^\top,         \\
+        P^r(t)    & = [P_1^r(t),  P_2^r(t), \dots,  P_m^r(t)]^\top, \\
+        Q^r(t)    & = [Q_1^r(t), Q_2^r(t), \dots,
+        Q_m^r(t)]^\top,
+    \end{align}
+    \begin{align}\label{the_system}
+        x(t)       & = [\theta^\top (t), ~V^\top (t)]^\top \in \mathbb{R}^n                  \\
+        u(t)       & = \big[\big(P^r(t))^\top, ~\big(Q^r(t))^\top\big]^\top \in \mathbb{R}^n \\
+        \dot{x}(t) & = f\big(x(t),u(t),\xi(t)\big)
+    \end{align}
+    where $n=2m$ and $\xi(t)\in \mathbb{R}^l$ denotes unmodeled dynamics/exogenous disturbances.
+    \note[item]{the system in \ref{the_system} is a reduced order model}
+    \note[item]{$\xi(t)$ is bounded, varies slowly with time, and is uncorrelated with the control input $u(t)$.}
+    \note[item]{We can assume the system is bounded-input, bounded-output stable}
+\end{frame}
+\begin{frame}
+    \frametitle{Discrete Time}
+    For some sufficiently small $T>0$ and $k=0,1,\ldots$ we can say:
+    \begin{align}\label{eq:discrete}
+        x_k & = \left[\theta_k^T, V_k^T\right]^T                          \\
+        u_k & = \left[\left(P_k^r\right)^T, \left(Q_k^r\right)^T\right]^T
+    \end{align}
+    then:
+    \begin{align}
+        x_{k+1} = x_k + Tf\left(x_k,u_k,\xi_k\right)
+    \end{align}
+\end{frame}
+\begin{frame}
+    \frametitle{Linearization}
+    Linearizing \eqref{the_system} around the point $\epsilon\coloneqq(x_{k-1}, u_{k-1}, \xi_{k-1})$ yields
+    \begin{equation}\label{first_linear}
+        \dot{x} \approx  ~ f(\epsilon)
+        + \frac{\partial f(x,u, \xi)}{\partial x}\Big|_{\epsilon} (x-x_{k-1})
+        + \frac{\partial f(x,u, \xi)}{\partial u}\Big|_{\epsilon} (u-u_{k-1})
+    \end{equation}
+    Substituting \eqref{first_linear} into \eqref{eq:discrete} gives
+    \begin{equation}
+        x_{k+1} \approx  ~ x_{k} + T f(\epsilon)
+        + T \frac{\partial f(x,u, \xi)}{\partial x}\Big|_{\epsilon} (x_k-x_{k-1})
+        + T \frac{\partial f(x,u, \xi)}{\partial u}\Big|_{\epsilon} (u_k-u_{k-1})
+    \end{equation}
+\end{frame}
+\begin{frame}
+    \frametitle{Matrix Formulation}
+
+    Define $\Delta x_k := x_k-x_{k-1}$ and $\Delta u_k := u_k - u_{k-1}$. Then
+    \begin{align}\label{linear}
+        \Delta x_{k+1} \approx  ~ \Delta x_k + T \frac{\partial f(x,u, \xi)}{\partial x}\Big|_{\epsilon} \Delta x_k
+        +T \frac{\partial f(x,u, \xi)}{\partial u}\Big|_{\epsilon} \Delta u_k
+        =                       ~ A_{k-1} \Delta x_k + B_{k-1} \Delta u_k
+    \end{align}
+    where
+    \begin{align}
+        A_{k-1} = \mathbb{I}_{n} + T \frac{\partial f(x,u, \xi)}{\partial x}\Big|_{\epsilon}
+    \end{align}
+    with $\mathbb{I}_n$ denoting the $n$-dimensional identity matrix, and
+    \begin{align}
+        B_{k-1} = T \frac{\partial f(x,u, \xi)}{\partial u}\Big|_{\epsilon}
+    \end{align}
+    \note[item]{The true $A$ and $B$ are, however, unknown! How do we go about finding them?}
+\end{frame}
+\subsection*{Recursive Least-Squares Estimation}
+\begin{frame}
+    \frametitle{Information Available to Us}
+    \begin{equation}
+        \Delta x_{k+1,i} = \begin{bmatrix}
+            A_{k-1,i} & b_{k-1,i}
+        \end{bmatrix}
+        \begin{bmatrix}
+            \Delta x_{k} \\ \Delta u_{k,i}
+        \end{bmatrix}
+        ,\ i\in\left\{1,\ldots,n\right\}
+    \end{equation}
+    where $A_{k-1,i}$ is the $i$-th row of $A_{k-1}$, $b_{k-1,i}$ is the
+    $(i,i)$-th entry of $B_{k-1}$ and $\Delta u_{k,i}$ is the $i$-th component
+    of $\Delta u_k$. Further define:
+    \begin{equation}
+        s_{k-1,i}  \coloneqq \left[A_{k-1,i}, b_{k-1,i}\right]^T,\
+        \phi_{k,i}\coloneqq \left[\Delta x_k^T\ \Delta u_{k,i}\right]^T
+    \end{equation}
+    Where $\phi_{k,i}$ is regressor vector for $\Delta x_{k+1,i}$. Then:
+    \begin{equation}
+        \Delta x_{k+1, i} = s_{k-1,i}^T\phi_{k,i}
+    \end{equation}
+\end{frame}
+\begin{frame}
+    \frametitle{Bibliography}
+    \bibliographystyle{amsalpha}
+    {
+        \tiny
+        \bibliography{qual_presentation.bib}
+    }
+\end{frame}
+\begin{frame}
+    \begin{center}
+        \huge Questions?
+    \end{center}
+\end{frame}
+\end{document}
