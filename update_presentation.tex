@@ -282,9 +282,153 @@
     \end{equation}
     Where $\phi_{k,i}$ is regressor vector for $\Delta x_{k+1,i}$. Then:
     \begin{equation}
-        \Delta x_{k+1, i} = s_{k-1,i}^T\phi_{k,i}
+        \Delta x_{k+1, i} = s_{k-1,i}^T\phi_{k,i},\ i\in\left\{1,\ldots,n\right\}
     \end{equation}
 \end{frame}
+\begin{frame}
+    \frametitle{Loss Function}
+    Define a loss function:
+    \begin{equation}
+        \ell\left(s_i\right)
+        = \sum_{l=1}^k \lambda^{k-l}\|\Delta x_{l+1,i}-s_i^T\phi_{l,i}\|_2^2
+        + d\lambda^k\|s_i\|_2^2
+        \label{eq:loss}
+    \end{equation}
+    where $\|\cdot\|_2$ is the Euclidean norm, $d>0$ is a regularization
+    parameter, $\lambda\in\left(0,1\right]$ is a forgetting factor.
+
+    An estimate of $s_i$ can be obtained as
+    \begin{equation}
+        \hat{s}_{k,i} = \argmin_{s_i}\ell\left(s_i\right)
+        \label{eq:loss_min}
+    \end{equation}
+    \eqref{eq:loss} is convex and differentiable $\implies$ solution to \eqref{eq:loss_min} is found when $\nabla\ell\left(s_i\right) = 0$
+\end{frame}
+\begin{frame}
+    \frametitle{Resursive Update}
+    \begin{equation}
+        \hat{s}_{k,i}
+        =\hat{s}_{k-1,i}+F_{k,i}\phi_{k,i}
+        \left(\Delta{x}_{k+1,i}-\hat{s}_{k-1}^T\phi_{k,i}\right),\
+        k\geq 1
+    \end{equation}
+    \begin{equation}
+        \label{eq:f_update}
+        F_{k,i} = \begin{cases}
+            \frac{1}{\lambda}\left(
+            F_{k-1,i}-\frac{F_{k-1,i} \phi_{k,i}\phi_{k,i}^TF_{k-1,i}}{\lambda + \phi_{k,i}^TF_{k-1,i}\phi_{k,i}}
+            \right) & \textrm{if }\|F_{k,i}\|\leq r \\
+            F_{k-1} & \textrm{otherwise}
+        \end{cases}
+    \end{equation}
+    with initial conditions:
+    \begin{equation}
+        \hat{s}_{0,i}=\mathbb{O}_{n+1},\ F_{0,i}=d^{-1}\mathbb{I}_{n+1}
+    \end{equation}
+    Note that the conditional in \eqref{eq:f_update} is to prevent integral windup.
+\end{frame}
+
+\section{Optimal Control Formulation}
+\begin{frame}
+    \frametitle{Control Objective}
+    Goals: drive average frequency error (AFE) to 0 and generator buses to some target
+    $V^*=\left[V_1^*, V_2^*,\ldots,V_m^*\right]$. Define AFE as:
+    \begin{equation}
+        \label{eq:afe}
+        \overline{\Delta\omega}(t) = \frac{1}{m}\sum_{i=1}^m\dot{\theta}_i(t)
+    \end{equation}
+    where $\dot{\theta}_i(t)$ is the $i$-th element of $\dot{x}$. In discrete time:
+    \begin{equation}
+        \lim_{k\rightarrow\infty}\frac{1}{m}\sum_{i=1}^m \Delta x_{k,i} = 0
+    \end{equation}
+    which is achieved by penalizing deviations by the term
+    $\frac{1}{m^2}\left(\sum_{i=1}^m\Delta x_{k,i}\right)^2$
+\end{frame}
+
+\begin{frame}
+    \frametitle{Control Objective}
+    Define a block matrix $\mathbb{T} = \left[\mathbb{O}_{m\times m} \mathbb{I}_m\right]$ and then:
+    \begin{equation}
+        \begin{aligned}
+            e_{k+1} & = V_{k+1}-V^*                                                     \\
+                    & = e_k+\mathbb{T}A_{k-1}\Delta x_{k} + \mathbb{T}B_{k-1}\Delta u_k
+        \end{aligned}
+    \end{equation}
+    and create an augmented state vector
+    \begin{equation}
+        z_k\coloneqq \begin{bmatrix}
+            \Delta x_k & e_k
+        \end{bmatrix}^T
+    \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Resulting Linearized Dynamics}
+    \begin{equation}
+        z_{k+1} = C_kz_k+D_k\Delta u_k
+    \end{equation}
+    where
+    \begin{equation}
+        C_k
+        \coloneqq
+        \begin{bmatrix}
+            A_{k-1}           & \mathbb{O}_{n\times m} \\
+            \mathbb{T}A_{k-1} & \mathbb{I}_m
+        \end{bmatrix},\
+        D_{k}
+        \coloneqq
+        \begin{bmatrix}
+            B_{k-1} \\ \mathbb{T}B_{k-1}
+        \end{bmatrix}
+    \end{equation}
+    We need to compute their estimates, which would require $\Delta u_k$ and
+    $\Delta x_{k+1}$. Lacking future-sight, we instead assume
+    $\hat{A}_{k-1}\approx \hat{A}_{k-1}$ and $\hat{B}_{k-1}\approx \hat{B}_{k-1}$
+    and then let
+    \begin{equation}
+        \Delta \hat{x}_{k+1} \coloneqq \hat{A}_{k-2}\Delta x_k + \hat{B}_{k-2}\Delta u_k
+    \end{equation}
+    \begin{equation}
+        \hat{e}_{k+1}\coloneqq e_k+\mathbb{T}\Delta\hat{x}_{k+1}
+    \end{equation}
+    Continue substitions to find:
+    \begin{equation}
+        \hat{z}_{k+1} = \hat{C}_{k-1}z_k + \hat{D}_{k-1}\Delta u_k
+    \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Model Predictive Control}
+    \begin{equation}
+        \label{eq:mpc}
+        \min_{\varphi\ell}\sum_{\ell=k}^{k+H-1}\left(
+        \zeta_{\ell}^T Q_{k}\zeta_l+\varphi_\ell^TR_k\varphi_\ell
+        \right)
+        + \zeta_{k+H}^T P_{k}\zeta_{k+H}
+    \end{equation}
+    subject to
+    \begin{equation}
+        \zeta_{\ell+1} = \hat{C}_{k-1}\zeta_\ell +\hat{D}_{k-1}\varphi_\ell,\   \ell=k,\ldots,k+H
+    \end{equation}
+    \begin{equation}
+        \zeta_k = z_k
+    \end{equation}
+    \begin{equation}
+        \underline{\Delta U} + \underline{\eta}_k \leq \varphi_i \leq \overline{\Delta u}-\overline{\eta}_k,\   \ell=k,\ldots,k+H
+    \end{equation}
+    and where $Q_k\succ 0$, $R_k\succ 0$ and $P_k$ comes from the unconstrained
+    solution of the algebraic Ricatti equation.
+    We solve \eqref{eq:mpc} and obtaining an optimal sequence of steps, we apply
+    only the first following the receding horizon principle. Then the update is:
+    \begin{equation}
+        u_k = u_{k-1} + \varphi_k^*
+    \end{equation}
+
+\end{frame}
+
+
+
+
 \begin{frame}
     \frametitle{Bibliography}
     \bibliographystyle{amsalpha}
