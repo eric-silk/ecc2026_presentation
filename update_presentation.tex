@@ -426,7 +426,87 @@
 
 \end{frame}
 
+\section{Implementation}
+\begin{frame}
+    \frametitle{Controller Hardware-In-the-Loop (CHIL) Simulator}
+    \begin{columns}
+        \begin{column}[T]{0.5\textwidth}
+            \vspace{0pt}
+            \begin{center}
+                \textbf{What is CHIL?}
+            \end{center}
+            \begin{itemize}
+                \item Real-time digital simulator
+                \item Simulates the grid
+                \item Allows testing controller hardware without risking a real system
+            \end{itemize}
+        \end{column}
+        \begin{column}[T]{0.5\textwidth}
+            \begin{figure}
+                \includegraphics[height=0.6\textheight]{img/hils.jpg}
+                \caption{Typhoon HIL 604 Simulators}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
 
+\begin{frame}
+    \frametitle{Computational Hardware}
+    \begin{columns}
+        \begin{column}[T]{0.5\textwidth}
+            \vspace{0pt}
+            \begin{center}
+                \textbf{Computational Nodes}
+            \end{center}
+            \begin{itemize}
+                \item 3 Raspberry Pi 5's, one per controllable generation resource
+                \item Running Raspbian 12 (Bookworm)
+                \item Adequate for our soft real-time requirements
+            \end{itemize}
+        \end{column}
+        \begin{column}[T]{0.5\textwidth}
+            \begin{figure}
+                \includegraphics[height=0.6\textheight]{img/rpis.jpg}
+                \caption{Small Cluster of Raspberry Pi's}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}
+    \frametitle{BANSHEE Microgrid}
+    \begin{figure}
+        \includegraphics[width=\textwidth]{img/BANSHEE_Eric_side.pdf}
+        \caption{BANSHEE: A prototypical Microgrid}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Software}
+    \begin{columns}
+        \begin{column}[T]{0.5\textwidth}
+            \vspace{0pt}
+            \begin{itemize}
+                \item Written in C++
+                \item Uses Eigen for Linear Algebra
+                \item Templated, both a static and dynamic allocation version
+                \item Implements the \textbf{unconstrained} version of the algorithm
+            \end{itemize}
+        \end{column}
+        \begin{column}[T]{0.5\textwidth}
+            \begin{figure}
+                \includegraphics[height=0.6\textheight]{img/mpc_code_snippet.png}
+                \caption{Snippet of the C++ Implementation}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+
+\section{Numerical Results}
+\begin{frame}
+    \frametitle{title}
+\end{frame}
 
 
 \begin{frame}
