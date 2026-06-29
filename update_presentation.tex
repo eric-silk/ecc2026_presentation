@@ -164,22 +164,26 @@
     \begin{center}
         Not all IBRs are controllable!
     \end{center}
-    \begin{align}
+    \begin{align*}
         P_{i}^{\circ}(t)=\begin{cases} P_{i}^{r}(t), &i=1,2,\ldots, m,\\ P_{i}^{d}(t), &i=m+1,m+2,\ldots, N,\end{cases}
-    \end{align}
+    \end{align*}
 
-    \begin{align}
-        Q_{i}^{\circ}(t)=\begin{cases} Q_{i}^{r}(t), &i=1,2,\ldots, m,\\ Q_{i}^{d}(t), &i=m+1,m+2,\ldots, N,\end{cases}\label{Q_0}
-    \end{align}
+    \begin{align*}
+        Q_{i}^{\circ}(t)=\begin{cases} Q_{i}^{r}(t), &i=1,2,\ldots, m,\\ Q_{i}^{d}(t), &i=m+1,m+2,\ldots, N,\end{cases}
+    \end{align*}
+    where the $r$ superscript indicates controllable devices and $d$ indicates
+    uncontrollable devices.
     \note[item]{Some IBRs are controllable, some aren't}
     \note[item]{$1..m$ are controllable}
     \note[item]{$m+1..N$ are not controllable}
 \end{frame}
 \begin{frame}
     \frametitle{Average Frequency Error}
-    \begin{align}
-        \overline{\Delta \omega}(t) & := \frac{1}{m}\sum_{i=1}^{m}\omega_i(t)-\omega^{\circ}.\label{AFEeqn}
-    \end{align}
+    Let $\omega_i$ be the frequency at bus $i$ and $\omega^0$ is the nominal frequency. Then,
+    \begin{align*}
+        \overline{\Delta \omega}(t) & := \frac{1}{m}\sum_{i=1}^{m}\omega_i(t)-\omega^{\circ}
+    \end{align*}
+    is the average frequency error.
     \begin{center}
         \textbf{We want to drive this value to 0, and voltages at the controllable buses to 1 p.u.!}
     \end{center}
@@ -241,10 +245,10 @@
 %\end{frame}
 \begin{frame}
     \frametitle{Matrix Formulation}
-    We then discretize in time, linearize around the previous operating point
+    We then discretize in time with timestep $T>0$, linearize around the previous operating point
     (defined as $\epsilon$) and
     define $\Delta x_k := x_k-x_{k-1}$ and $\Delta u_k := u_k - u_{k-1}$. This yields
-    \begin{align*}\label{linear}
+    \begin{align*}
         \Delta x_{k+1} = ~ A_{k-1} \Delta x_k + B_{k-1} \Delta u_k
     \end{align*}
     where
@@ -260,6 +264,7 @@
 \subsection*{Recursive Least-Squares Estimation}
 \begin{frame}
     \frametitle{Information Available to Us}
+    The inverters are affine in control, so:
     \begin{equation*}
         \Delta x_{k+1,i} = \begin{bmatrix}
             A_{k-1,i} & b_{k-1,i}
@@ -281,6 +286,7 @@
         \Delta x_{k+1, i} = s_{k-1,i}^T\phi_{k,i},\ i\in\left\{1,\ldots,n\right\}
     \end{equation*}
 
+    \note[]{"Affine in control" means the inverter controls only its state, no off-diagonal entries}
     \note[]{We only can measure and control the controllable generators}
     \note[]{We are not controlling the loads!}
     \note[]{So we are differentiating the outputs by their associated inputs only}
@@ -350,13 +356,11 @@
 \begin{frame}
     \frametitle{Control Objective}
     Define a block matrix $\mathbb{T} = \left[\mathbb{O}_{m\times m} \mathbb{I}_m\right]$ and then:
-    \begin{equation*}
-        \begin{aligned}
-            e_{k+1} & = V_{k+1}-V^*                                                     \\
-                    & = e_k+\mathbb{T}A_{k-1}\Delta x_{k} + \mathbb{T}B_{k-1}\Delta u_k \\
-                    & = e_k+\mathbb{T}\Delta x_{k+1}
-        \end{aligned}
-    \end{equation*}
+    \begin{align*}
+        e_{k+1} & = V_{k+1}-V^*                                                     \\
+                & = e_k+\mathbb{T}A_{k-1}\Delta x_{k} + \mathbb{T}B_{k-1}\Delta u_k \\
+                & = e_k+\mathbb{T}\Delta x_{k+1}
+    \end{align*}
     and create an augmented state vector
     \begin{equation*}
         z_k\coloneqq \begin{bmatrix}
